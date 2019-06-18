@@ -159,7 +159,6 @@ int main() {
             Y.push_back(coord[1]);
           }
 
-
           // Transform ref point to car's coordinates XY
           for (int i=0; i<X.size(); ++i){
             double shift_x = X[i] - pos_x;
@@ -170,32 +169,20 @@ int main() {
           tk::spline s;
           s.set_points(X,Y);    // currently it is required that X is already sorted
 
-          // Calculate spline for points up to 30 meters forward from the reference point
-          double target_x = 30.0;
-          double target_y = s(target_x);
-
-          double x_add_on = 0;
-
           for (int i = 0; i < 40-path_size; ++i) {
 
-            double x_point = x_add_on + step_dist;
-            double y_point = s(x_point);
-
-            x_add_on = x_point;
+            double new_car_x = step_dist * (i + 1);
+            double new_car_y = s(x_point);
 
             double x_t = x_point;
             double y_t = y_point;
 
-            x_point = x_t * cos(angle) - y_t * sin(angle);
-            y_point = x_t * sin(angle) + y_t * cos(angle);
+            double new_x = pos_x + new_car_x * cos(angle) - new_car_y * sin(angle);
+            double new_y = pos_y + new_car_x * sin(angle) + new_car_y * cos(angle);
 
-            x_point += pos_x;
-            y_point += pos_y;
+//            x_point += pos_x;
+//            y_point += pos_y;
 
-
-//            double next_s = pos_s + (dist_inc * i);
-//            double next_d = (2 + 4 * lane);
-//            coord = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
             next_x_vals.push_back(x_point);
             next_y_vals.push_back(y_point);
           }
