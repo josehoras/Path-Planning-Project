@@ -166,25 +166,19 @@ int main() {
             X[i] = (shift_x * cos(0-angle) - shift_y*sin(0-angle));
             Y[i] = (shift_x * sin(0-angle) + shift_y*cos(0-angle));
           }
+          // Create spline
           tk::spline s;
-          s.set_points(X,Y);    // currently it is required that X is already sorted
-
+          s.set_points(X,Y);
+          // Set points along the spline set apart by step_dist
           for (int i = 0; i < 40-path_size; ++i) {
-
             double new_car_x = step_dist * (i + 1);
-            double new_car_y = s(x_point);
-
-            double x_t = x_point;
-            double y_t = y_point;
+            double new_car_y = s(new_car_x);
 
             double new_x = pos_x + new_car_x * cos(angle) - new_car_y * sin(angle);
             double new_y = pos_y + new_car_x * sin(angle) + new_car_y * cos(angle);
 
-//            x_point += pos_x;
-//            y_point += pos_y;
-
-            next_x_vals.push_back(x_point);
-            next_y_vals.push_back(y_point);
+            next_x_vals.push_back(new_x);
+            next_y_vals.push_back(new_y);
           }
 
           msgJson["next_x"] = next_x_vals;
