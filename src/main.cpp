@@ -7,11 +7,14 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "helpers.h"
 #include "json.hpp"
+#include "spline.h"
 
 // for convenience
 using nlohmann::json;
 using std::string;
 using std::vector;
+using std::cout;
+using std::endl;
 
 int main() {
   uWS::Hub h;
@@ -63,12 +66,12 @@ int main() {
 
       if (s != "") {
         auto j = json::parse(s);
-        
+
         string event = j[0].get<string>();
-        
+
         if (event == "telemetry") {
           // j[1] is the data JSON object
-          
+
           // Main car's localization Data
           double car_x = j[1]["x"];
           double car_y = j[1]["y"];
@@ -80,11 +83,11 @@ int main() {
           // Previous path data given to the Planner
           auto previous_path_x = j[1]["previous_path_x"];
           auto previous_path_y = j[1]["previous_path_y"];
-          // Previous path's end s and d values 
+          // Previous path's end s and d values
           double end_path_s = j[1]["end_path_s"];
           double end_path_d = j[1]["end_path_d"];
 
-          // Sensor Fusion Data, a list of all other cars on the same side 
+          // Sensor Fusion Data, a list of all other cars on the same side
           //   of the road.
           auto sensor_fusion = j[1]["sensor_fusion"];
 
@@ -97,7 +100,105 @@ int main() {
            * TODO: define a path made up of (x,y) points that the car will visit
            *   sequentially every .02 seconds
            */
+          double pos_x;
+          double pos_y;
+          double angle;
+          double pos_s;
+          double pos_d;
+          double car_v = car_speed;
+          int path_size = previous_path_x.size();
+          // cout << car_d << endl;
+          for (int i = 0; i < path_size; ++i) {
+            next_x_vals.push_back(previous_path_x[i]);
+            next_y_vals.push_back(previous_path_y[i]);
+          }
 
+          if (path_size == 0) {
+            pos_x = car_x;
+            pos_y = car_y;
+            angle = deg2rad(car_yaw);
+            pos_s = car_s;
+            pos_d = car_d;
+
+          } else {
+            pos_x = previous_path_x[path_size-1];
+            pos_y = previous_path_y[path_size-1];
+            double pos_x2 = previous_path_x[path_size-2];
+            double pos_y2 = previous_path_y[path_size-2];
+            angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
+            // car_v = sqrt(pow(pos_x2-pos_x, 2) + pow(pos_y2-pos_y, 2)) / 0.02;
+            vector<double> pos_sd = getFrenet(pos_x, pos_y, angle, map_waypoints_x, map_waypoints_y);
+            pos_s = pos_sd[0];
+            pos_d = pos_sd[1];
+          }
+          // 1mph = 1.609kmph = 1609/3600 mps = 0.4469 mps = 0.008938 meters in 0.02sec
+          double lane = 1;
+          double speed_limit = 49.5;
+          if (car_v < speed_limit/2) {
+            car_v += 4;
+          }
+          else if (car_v < speed_limit-2) {
+            car_v += 1.5;
+          }
+          else{
+            car_v = speed_limit;
+          }
+          //cout << car_v << endl;
+          double step_dist = 0.008938 * car_v;
+
+          // Set XY points bassed on some s-d points as basis for the spline
+          vector<double> X, Y;
+          vector<double> coord;
+          X.push_back(pos_x);
+          Y.push_back(pos_y);
+          for (int i = 1; i < 4; ++i){
+            double next_s = pos_s + i * 20;
+            double next_d = (2 + 4 * lane);
+            coord = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+            X.push_back(coord[0]);
+            Y.push_back(coord[1]);
+          }
+
+
+          // Transform ref point to car's coordinates XY
+          for (int i=0; i<X.size(); ++i){
+            double shift_x = X[i] - pos_x;
+            double shift_y = Y[i] - pos_y;
+            X[i] = (shift_x * cos(0-angle) - shift_y*sin(0-angle));
+            Y[i] = (shift_x * sin(0-angle) + shift_y*cos(0-angle));
+          }
+          tk::spline s;
+          s.set_points(X,Y);    // currently it is required that X is already sorted
+
+          // Calculate spline for points up to 30 meters forward from the reference point
+          double target_x = 30.0;
+          double target_y = s(target_x);
+
+          double x_add_on = 0;
+
+          for (int i = 0; i < 40-path_size; ++i) {
+
+            double x_point = x_add_on + step_dist;
+            double y_point = s(x_point);
+
+            x_add_on = x_point;
+
+            double x_t = x_point;
+            double y_t = y_point;
+
+            x_point = x_t * cos(angle) - y_t * sin(angle);
+            y_point = x_t * sin(angle) + y_t * cos(angle);
+
+            x_point += pos_x;
+            y_point += pos_y;
+
+
+//            double next_s = pos_s + (dist_inc * i);
+//            double next_d = (2 + 4 * lane);
+//            coord = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+            next_x_vals.push_back(x_point);
+            next_y_vals.push_back(y_point);
+          }
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
@@ -131,6 +232,6 @@ int main() {
     std::cerr << "Failed to listen to port" << std::endl;
     return -1;
   }
-  
+
   h.run();
 }
