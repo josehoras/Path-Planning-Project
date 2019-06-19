@@ -108,10 +108,7 @@ int main() {
           double car_v = car_speed;
           int path_size = previous_path_x.size();
           // cout << car_d << endl;
-          for (int i = 0; i < path_size; ++i) {
-            next_x_vals.push_back(previous_path_x[i]);
-            next_y_vals.push_back(previous_path_y[i]);
-          }
+
 
           if (path_size == 0) {
             pos_x = car_x;
@@ -119,18 +116,15 @@ int main() {
             angle = deg2rad(car_yaw);
             pos_s = car_s;
             pos_d = car_d;
-
           } else {
             pos_x = previous_path_x[path_size-1];
             pos_y = previous_path_y[path_size-1];
             double pos_x2 = previous_path_x[path_size-2];
             double pos_y2 = previous_path_y[path_size-2];
             angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
-            // car_v = sqrt(pow(pos_x2-pos_x, 2) + pow(pos_y2-pos_y, 2)) / 0.02;
-            vector<double> pos_sd = getFrenet(pos_x, pos_y, angle, map_waypoints_x, map_waypoints_y);
-            pos_s = pos_sd[0];
-            pos_d = pos_sd[1];
-          }
+            pos_s = end_path_s;
+            pos_d = end_path_d;
+           }
           // 1mph = 1.609kmph = 1609/3600 mps = 0.4469 mps = 0.008938 meters in 0.02sec
           double lane = 1;
           double speed_limit = 49.5;
@@ -170,15 +164,25 @@ int main() {
           tk::spline s;
           s.set_points(X,Y);
           // Set points along the spline set apart by step_dist
-          for (int i = 0; i < 40-path_size; ++i) {
-            double new_car_x = step_dist * (i + 1);
-            double new_car_y = s(new_car_x);
+//          for (int i = 0; i < path_size; ++i) {
+//            next_x_vals.push_back(previous_path_x[i]);
+//            next_y_vals.push_back(previous_path_y[i]);
+//          }
+          for (int i = 0; i < 40; ++i) {
+            if (i < path_size) {
+              next_x_vals.push_back(previous_path_x[i]);
+              next_y_vals.push_back(previous_path_y[i]);
+            }
+            else {
+              double new_car_x = step_dist * (i - path_size);
+              double new_car_y = s(new_car_x);
 
-            double new_x = pos_x + new_car_x * cos(angle) - new_car_y * sin(angle);
-            double new_y = pos_y + new_car_x * sin(angle) + new_car_y * cos(angle);
+              double new_x = pos_x + new_car_x * cos(angle) - new_car_y * sin(angle);
+              double new_y = pos_y + new_car_x * sin(angle) + new_car_y * cos(angle);
 
-            next_x_vals.push_back(new_x);
-            next_y_vals.push_back(new_y);
+              next_x_vals.push_back(new_x);
+              next_y_vals.push_back(new_y);
+            }
           }
 
           msgJson["next_x"] = next_x_vals;
