@@ -100,6 +100,9 @@ int main() {
            * TODO: define a path made up of (x,y) points that the car will visit
            *   sequentially every .02 seconds
            */
+          double lane = 1;
+          double speed_limit = 49.5;
+
           double pos_x;
           double pos_y;
           double angle;
@@ -108,7 +111,17 @@ int main() {
           double car_v = car_speed;
           int path_size = previous_path_x.size();
           // cout << car_d << endl;
-
+          if (car_v < speed_limit/2) {
+            car_v += 4;
+          }
+          else if (car_v < speed_limit-2) {
+            car_v += 1.5;
+          }
+          else{
+            car_v = speed_limit;
+          }
+          // 1mph = 1.609kmph = 1609/3600 mps = 0.4469 mps = 0.008938 meters in 0.02sec
+          double step_dist = 0.008938 * car_v;
 
           if (path_size == 0) {
             pos_x = car_x;
@@ -125,20 +138,6 @@ int main() {
             pos_s = end_path_s;
             pos_d = end_path_d;
            }
-          // 1mph = 1.609kmph = 1609/3600 mps = 0.4469 mps = 0.008938 meters in 0.02sec
-          double lane = 1;
-          double speed_limit = 49.5;
-          if (car_v < speed_limit/2) {
-            car_v += 4;
-          }
-          else if (car_v < speed_limit-2) {
-            car_v += 1.5;
-          }
-          else{
-            car_v = speed_limit;
-          }
-          //cout << car_v << endl;
-          double step_dist = 0.008938 * car_v;
 
           // Set XY points bassed on some s-d points as basis for the spline
           vector<double> X, Y;
@@ -163,18 +162,14 @@ int main() {
           // Create spline
           tk::spline s;
           s.set_points(X,Y);
-          // Set points along the spline set apart by step_dist
-//          for (int i = 0; i < path_size; ++i) {
-//            next_x_vals.push_back(previous_path_x[i]);
-//            next_y_vals.push_back(previous_path_y[i]);
-//          }
+
           for (int i = 0; i < 40; ++i) {
             if (i < path_size) {
               next_x_vals.push_back(previous_path_x[i]);
               next_y_vals.push_back(previous_path_y[i]);
             }
-            else {
-              double new_car_x = step_dist * (i - path_size);
+            else {        // Set rest of the points along the spline set apart by step_dist
+              double new_car_x = step_dist * (i - path_size + 1);
               double new_car_y = s(new_car_x);
 
               double new_x = pos_x + new_car_x * cos(angle) - new_car_y * sin(angle);
