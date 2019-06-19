@@ -154,16 +154,21 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s,
   return {x,y};
 }
 
+int get_intended_lane(int current_lane, string state){
+  int intended_lane = current_lane;
+  string dir = state.substr(state.size() - 2);
+  if(dir == "CL" && current_lane != 0) { intended_lane = current_lane-1; }
+  if(dir == "CR" && current_lane != 2) { intended_lane = current_lane+1; }
+  return intended_lane;
+}
+
 double calculate_cost (int current_lane, int goal_lane, string state, double speed_limit,
                    vector<double> max_speed, vector<double> front_car_dist,
                    vector<double> back_car_dist) {
 
 
-  int intended_lane = current_lane;
-  string dir = state.substr(state.size() - 2);
-  if(dir == "CL" && current_lane != 0) { intended_lane = current_lane-1; }
-  if(dir == "CR" && current_lane != 2) { intended_lane = current_lane+1; }
 
+  int intended_lane = get_intended_lane(current_lane, state);
 
   double keep_plan = 0;
   if(goal_lane == intended_lane)
