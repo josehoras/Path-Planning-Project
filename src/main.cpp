@@ -136,14 +136,15 @@ int main() {
           // Calculate max speed on each lane
           vector<double> max_speed(3);
           vector<double> front_car_dist(3);
+          vector<double> back_car_dist(3);
           for(int check_lane = 0; check_lane<3; ++check_lane){
             vector<int> cars_in_lane;
             for(int i=0; i<sensor_fusion.size(); ++i) {
               double check_car_s = sensor_fusion[i][5];
               double check_car_d = sensor_fusion[i][6];
-              // If car is in our lane and is up to 50m in front of us
+              // If car is in our lane and is up to 100m in front or behind us
               if(int(check_car_d / 4) == check_lane &&
-                check_car_s > car_s && check_car_s < car_s + 50){
+                 abs(check_car_s - pos_s) < 50){
                 //cout << check_car_s << ", " << car_s << endl;
                 cars_in_lane.push_back(i);
               }
@@ -151,23 +152,23 @@ int main() {
             // For cars in the lane in front of us, get the closest, its speed and position
             // when we will be at car_s after path_size
             front_car_dist[check_lane] = 500.0;
-            if(cars_in_lane.size() > 0){
-              for(int i=0;i<cars_in_lane.size();++i){
-                double vx = sensor_fusion[cars_in_lane[i]][3];
-                double vy = sensor_fusion[cars_in_lane[i]][4];
-                double front_car_v = sqrt(vx*vx+vy*vy);
-                double front_car_current_s = sensor_fusion[cars_in_lane[i]][5];
-                double front_car_s = front_car_current_s + front_car_v * path_size * 0.02;
+            back_car_dist[check_lane] = 500.0;
+            max_speed[check_lane] = speed_limit;
+            for(int i=0;i<cars_in_lane.size();++i){
+              double vx = sensor_fusion[cars_in_lane[i]][3];
+              double vy = sensor_fusion[cars_in_lane[i]][4];
+              double other_car_v = sqrt(vx*vx+vy*vy);
+              double other_car_current_s = sensor_fusion[cars_in_lane[i]][5];
+              double other_car_s = other_car_current_s + other_car_v * path_size * 0.02;
 
-                if(front_car_s - car_s < front_car_dist[check_lane]){
-                  front_car_dist[check_lane] = front_car_s - car_s;
-                  // 1 m/s = 3600 m/h = 3.6 km/h = 2.237 m/h
-                  max_speed[check_lane] = front_car_v * 2.237;
-                }
+              if(other_car_s > pos_s && (other_car_s - pos_s) < front_car_dist[check_lane]){
+                front_car_dist[check_lane] = other_car_s - pos_s;
+                // 1 m/s = 3600 m/h = 3.6 km/h = 2.237 m/h
+                max_speed[check_lane] = other_car_v * 2.237;
               }
-            }
-            else{
-              max_speed[check_lane] = speed_limit;
+              if(other_car_s < pos_s && (pos_s - other_car_s) < back_car_dist[check_lane]){
+                back_car_dist[check_lane] = pos_s - other_car_s;
+              }
             }
           }
           for(int i=0; i<max_speed.size(); ++i){
@@ -178,7 +179,10 @@ int main() {
             cout << "s: " << front_car_dist[i] << "  /  ";
           }
           cout << endl;
-
+          for(int i=0; i<max_speed.size(); ++i){
+            cout << "b: " << back_car_dist[i] << "  /  ";
+          }
+          cout << endl;
           // Adjust car velocity to our car lane
           if(max_speed[lane] == speed_limit){
             car_v += (max_speed[lane]  - car_v) / 10;
@@ -193,7 +197,56 @@ int main() {
           }
 
 
+          // Calculate trajectories
+          vector<int> future_lane_op;
+          if(lane==0){
+            future_lane_op.push_back(0);
+            future_lane_op.push_back(1);
+          }
+          if(lane==1){
+            future_lane_op.push_back(1);
+            future_lane_op.push_back(0);
+            future_lane_op.push_back(2);
+          }
+          if(lane==2){
+            future_lane_op.push_back(2);
+            future_lane_op.push_back(1);
+          }
 
+          // Calculate cost for each lane option
+          vector<double> lane_cost(3);
+          for(int i=0; i<future_lane_op.size(); ++i){
+            double eff_cost = (speed_limit - max_speed[future_lane_op[i]]) / speed_limit;
+            double sec_cost = 0;
+            if(front_car_dist[future_lane_op[i]] < 25){
+              sec_cost += (25 - front_car_dist[future_lane_op[i]]) / 50;
+            }
+            if(back_car_dist[future_lane_op[i]] < 10 && future_lane_op[i] != lane){
+              sec_cost += (10 - back_car_dist[future_lane_op[i]]) / 20;
+            }
+            double lazy_cost = 0;
+            if(future_lane_op[i] != lane) { lazy_cost = 0.1; }
+            lane_cost[future_lane_op[i]] = eff_cost + sec_cost + lazy_cost;
+          }
+          // Choose lower cost
+          double min_cost = 100.0;
+          int pref_lane;
+          for(int i=0; i<future_lane_op.size(); ++i){
+            if(lane_cost[future_lane_op[i]] < min_cost){
+              min_cost = lane_cost[future_lane_op[i]];
+              pref_lane = future_lane_op[i];
+            }
+          }
+          // Print lane costs and preferred lane
+
+          for(int i=0; i<max_speed.size(); ++i){
+            cout << "c: " << lane_cost[i] << "  /  ";
+          }
+          cout << "   ---   " << pref_lane << endl;
+          cout << endl;
+
+          // Change to preferred lane!
+          lane = pref_lane;
           // Set XY points bassed on some s-d points as basis for the spline
           vector<double> X, Y;
           vector<double> coord;
