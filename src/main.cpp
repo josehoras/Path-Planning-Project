@@ -105,34 +105,30 @@ int main() {
           //double lane = 1;
           double speed_limit = 49.5;
 
-          double pos_x;
-          double pos_y;
-          double angle;
-          double pos_s;
-          double pos_d;
+          double end_path_x;
+          double end_path_y;
+          double end_path_phi;
           double car_v = car_speed;
           int path_size = previous_path_x.size();
           // cout << car_d << endl;
 
 
           if (path_size == 0) {
-            pos_x = car_x;
-            pos_y = car_y;
-            angle = deg2rad(car_yaw);
-            pos_s = car_s;
-            pos_d = car_d;
+            end_path_x = car_x;
+            end_path_y = car_y;
+            end_path_phi = deg2rad(car_yaw);
+            end_path_s = car_s;
+            end_path_d = car_d;
           }
           else {
-            pos_x = previous_path_x[path_size-1];
-            pos_y = previous_path_y[path_size-1];
-            double pos_x2 = previous_path_x[path_size-2];
-            double pos_y2 = previous_path_y[path_size-2];
-            angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
-            pos_s = end_path_s;
-            pos_d = end_path_d;
+            end_path_x = previous_path_x[path_size-1];
+            end_path_y = previous_path_y[path_size-1];
+            double end_path_x2 = previous_path_x[path_size-2];
+            double end_path_y2 = previous_path_y[path_size-2];
+            end_path_phi = atan2(end_path_y-end_path_y2,end_path_x-end_path_x2);
           }
 
-          int goal_lane = pos_d / 4;
+          int path_end_lane = end_path_d / 4;
           int current_lane = car_d / 4;
           //cout << car_state << endl;
 
@@ -148,7 +144,7 @@ int main() {
               double check_car_d = sensor_fusion[i][6];
               // If car is in our lane and is up to 100m in front or behind us
               if(int(check_car_d / 4) == check_lane &&
-                 abs(check_car_s - pos_s) < 50){
+                 abs(check_car_s - end_path_s) < 50){
                 //cout << check_car_s << ", " << car_s << endl;
                 cars_in_lane.push_back(i);
               }
@@ -165,13 +161,13 @@ int main() {
               double other_car_current_s = sensor_fusion[cars_in_lane[i]][5];
               double other_car_s = other_car_current_s + other_car_v * path_size * 0.02;
 
-              if(other_car_s > pos_s && (other_car_s - pos_s) < front_car_dist[check_lane]){
-                front_car_dist[check_lane] = other_car_s - pos_s;
+              if(other_car_s > end_path_s && (other_car_s - end_path_s) < front_car_dist[check_lane]){
+                front_car_dist[check_lane] = other_car_s - end_path_s;
                 // 1 m/s = 3600 m/h = 3.6 km/h = 2.237 m/h
                 max_speed[check_lane] = other_car_v * 2.237;
               }
-              if(other_car_s < pos_s && (pos_s - other_car_s) < back_car_dist[check_lane]){
-                back_car_dist[check_lane] = pos_s - other_car_s;
+              if(other_car_s < end_path_s && (end_path_s - other_car_s) < back_car_dist[check_lane]){
+                back_car_dist[check_lane] = end_path_s - other_car_s;
               }
             }
           }
@@ -187,18 +183,7 @@ int main() {
             cout << "b: " << back_car_dist[i] << "  /  ";
           }
           cout << endl;
-          // Adjust car velocity to our car lane
-          if(max_speed[current_lane] == speed_limit){
-            car_v += (max_speed[current_lane]  - car_v) / 10;
-          }
-          else{
-            if(front_car_dist[current_lane] > 25){
-              car_v += (max_speed[current_lane] - car_v) / 8;
-            }
-            else{
-              car_v += (max_speed[current_lane] - 5 - car_v) / 5;
-            }
-          }
+
 
           // Get successor states
           vector<string> states;
@@ -224,7 +209,7 @@ int main() {
           // Calculate cost for each lane option
           vector<double> state_cost;
           for(int i=0; i < states.size(); ++i){
-            state_cost.push_back(calculate_cost(current_lane, goal_lane, states[i], speed_limit,
+            state_cost.push_back(calculate_cost(current_lane, path_end_lane, states[i], speed_limit,
                                   max_speed, front_car_dist, back_car_dist));
           }
           // Choose lower cost
@@ -237,11 +222,30 @@ int main() {
             }
           }
 
+          // Generate trajectory and change to preferred state
+          vector<double> trajectory;
+          trajectory = generate_trajectory(pref_state, current_lane, path_end_lane, speed_limit,
+                                           max_speed, front_car_dist, back_car_dist);
+          int goal_lane = trajectory[0];
+          double goal_vel = trajectory[1];
+
+          cout<<"Goal lane: "<<goal_lane<<", Goal vel: "<<goal_vel<<endl;
+
+          // Adjust car velocity to our car lane
+          if(max_speed[current_lane] == speed_limit){
+            car_v += (max_speed[current_lane]  - car_v) / 10;
+          }
+          else{
+            if(front_car_dist[current_lane] > 25){
+              car_v += (max_speed[current_lane] - car_v) / 8;
+            }
+            else{
+              car_v += (max_speed[current_lane] - 5 - car_v) / 5;
+            }
+          }
+
           // Choose trajectory for preferred state
-          int pref_lane = current_lane;
-          string dir = pref_state.substr(pref_state.size() - 2);
-          if(dir == "CL") {  pref_lane = current_lane-1; }
-          if(dir == "CR") {  pref_lane = current_lane+1; }
+          int pref_lane = get_intended_lane(current_lane, pref_state);
 
           // Print lane costs and preferred lane
           for(int i=0; i<max_speed.size(); ++i){
@@ -256,10 +260,10 @@ int main() {
           // Set XY points bassed on some s-d points as basis for the spline
           vector<double> X, Y;
           vector<double> coord;
-          X.push_back(pos_x);
-          Y.push_back(pos_y);
+          X.push_back(end_path_x);
+          Y.push_back(end_path_y);
           for (int i = 1; i < 4; ++i){
-            double next_s = pos_s + i * 20;
+            double next_s = end_path_s + i * 20;
             double next_d = (2 + 4 * goal_lane);
             coord = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
             X.push_back(coord[0]);
@@ -268,10 +272,10 @@ int main() {
 
           // Transform ref point to car's coordinates XY
           for (int i=0; i<X.size(); ++i){
-            double shift_x = X[i] - pos_x;
-            double shift_y = Y[i] - pos_y;
-            X[i] = (shift_x * cos(0-angle) - shift_y*sin(0-angle));
-            Y[i] = (shift_x * sin(0-angle) + shift_y*cos(0-angle));
+            double shift_x = X[i] - end_path_x;
+            double shift_y = Y[i] - end_path_y;
+            X[i] = (shift_x * cos(0-end_path_phi) - shift_y*sin(0-end_path_phi));
+            Y[i] = (shift_x * sin(0-end_path_phi) + shift_y*cos(0-end_path_phi));
           }
           // Create spline
           tk::spline s;
@@ -289,8 +293,8 @@ int main() {
               double new_car_x = step_dist * (i - path_size + 1);
               double new_car_y = s(new_car_x);
 
-              double new_x = pos_x + new_car_x * cos(angle) - new_car_y * sin(angle);
-              double new_y = pos_y + new_car_x * sin(angle) + new_car_y * cos(angle);
+              double new_x = end_path_x + new_car_x * cos(end_path_phi) - new_car_y * sin(end_path_phi);
+              double new_y = end_path_y + new_car_x * sin(end_path_phi) + new_car_y * cos(end_path_phi);
 
               next_x_vals.push_back(new_x);
               next_y_vals.push_back(new_y);

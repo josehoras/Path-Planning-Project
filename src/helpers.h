@@ -167,12 +167,13 @@ double calculate_cost (int current_lane, int goal_lane, string state, double spe
                    vector<double> back_car_dist) {
 
 
-
   int intended_lane = get_intended_lane(current_lane, state);
 
-  double keep_plan = 0;
-  if(goal_lane == intended_lane)
-    keep_plan = -0.5;
+  double keep_change = 0;
+  if(state == "LCL" || state=="LCR"){
+    if(goal_lane == intended_lane && goal_lane!=current_lane)
+      keep_change = -0.5;
+  }
   double eff_cost = (speed_limit - max_speed[intended_lane]) / speed_limit;
   double sec_cost = 0;
   if(front_car_dist[intended_lane] < 25){
@@ -183,8 +184,23 @@ double calculate_cost (int current_lane, int goal_lane, string state, double spe
   }
   double lazy_cost = 0;
   if(intended_lane != current_lane) { lazy_cost = 0.1; }
-  return eff_cost + sec_cost + lazy_cost + keep_plan;
+  return eff_cost + sec_cost + lazy_cost + keep_change;
 
 }
+
+vector<double> generate_trajectory(string pref_state, int current_lane, int goal_lane,
+                                     double speed_limit, vector<double> max_speed,
+                                     vector<double> front_car_dist, vector<double> back_car_dist){
+
+  double intended_lane;
+  double goal_vel;
+
+  if(pref_state == "KL"){
+    intended_lane = current_lane;
+    goal_vel = max_speed[intended_lane];
+  }
+  return {intended_lane, goal_vel};
+}
+
 
 #endif  // HELPERS_H
