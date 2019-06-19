@@ -131,35 +131,55 @@ int main() {
           }
 
           int lane = pos_d / 4;
-          cout << lane << endl;
+          //cout << lane << endl;
 
-          bool too_close = false;
-          double front_limit = speed_limit;
-          // Sensor fusion
-          for(int i=0; i<sensor_fusion.size(); ++i) {
-            // car in my lane
-            float d = sensor_fusion[i][6];
-            if(d < (2 + 4 * lane + 2) && d > (2 + 4 * lane - 2)){
-              double vx = sensor_fusion[i][3];
-              double vy = sensor_fusion[i][4];
-              double check_speed = sqrt(vx*vx+vy*vy);
+          // Calculate max speed on each lane
+          vector<double> max_speed(3);
+          for(int check_lane = 0; check_lane<3; ++check_lane){
+            vector<int> cars_in_lane;
+            for(int i=0; i<sensor_fusion.size(); ++i) {
               double check_car_s = sensor_fusion[i][5];
-              check_car_s += (double)path_size * 0.02 * check_speed;
-              if(check_car_s > car_s && check_car_s < car_s + 35){
-                cout << "Approaching front car!!!" << endl;
-                too_close = true;
-                front_limit = check_speed;
+              double check_car_d = sensor_fusion[i][6];
+              if(int(check_car_d / 4) == check_lane &&
+                check_car_s > car_s && check_car_s < car_s + 35){
+                //cout << check_car_s << ", " << car_s << endl;
+                cars_in_lane.push_back(i);
               }
             }
+            if(cars_in_lane.size() > 0){
+              double closest_dist = 50.0;
+              for(int i=0;i<cars_in_lane.size();++i){
+                double check_car_s = sensor_fusion[cars_in_lane[i]][5];
+                if(check_car_s - car_s < closest_dist){
+                  closest_dist = check_car_s - car_s;
+                  double vx = sensor_fusion[cars_in_lane[i]][3];
+                  double vy = sensor_fusion[cars_in_lane[i]][4];
+                  double check_speed = sqrt(vx*vx+vy*vy);
+                  // check speed in m/s
+                  // 1 m/s = 3600 m/h = 3.6 km/h = 2.237 m/h
+                  check_speed = check_speed * 2.237;
+                  //cout << closest_dist << ", " << vx << ", " << vy << endl;
+                  max_speed[check_lane] = check_speed;
+                }
+              }
+            }
+            else{
+              max_speed[check_lane] = speed_limit;
+            }
+          }
+          for(int i=0; i<max_speed.size(); ++i){
+            cout << i << ": " << max_speed[i] << "  /  ";
+          }
+          cout << endl;
+
+          // Adjust car velocity to our car lane
+          if(max_speed[lane] == speed_limit){
+            car_v += (max_speed[lane]  - car_v) / 10;
+          }
+          else{
+            car_v += (max_speed[lane] - 3 - car_v) / 6;
           }
 
-          if(too_close){
-            car_v -= (car_v - front_limit) / 10;
-            lane = 0;
-          }
-          else if(car_v < speed_limit - 0.5){
-            car_v += (speed_limit - car_v) / 10;
-          }
 
 
           // Set XY points bassed on some s-d points as basis for the spline
