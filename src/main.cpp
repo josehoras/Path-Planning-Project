@@ -16,6 +16,8 @@ using std::vector;
 using std::cout;
 using std::endl;
 
+string car_state = "KL";
+
 int main() {
   uWS::Hub h;
 
@@ -131,7 +133,8 @@ int main() {
           }
 
           int lane = pos_d / 4;
-          //cout << lane << endl;
+          //cout << car_state << endl;
+
 
           // Calculate max speed on each lane
           vector<double> max_speed(3);
@@ -196,51 +199,59 @@ int main() {
             }
           }
 
+          // Get successor states
+          vector<string> states;
+          states.push_back("KL");
+          if(car_state == "KL") {
+            if (lane != 0) { states.push_back("PLCL"); }
+            if (lane != 2) { states.push_back("PLCR"); }
+          } else if (car_state == "PLCL" && lane != 0) {
+              states.push_back("PLCL");
+              states.push_back("LCL");
+          } else if (car_state == "PLCR" && lane != 2) {
+              states.push_back("PLCR");
+              states.push_back("LCR");
+          }
+          else if (car_state == "LCL") { states.push_back("LCL");}
+          else if (car_state == "LCR") { states.push_back("LCR");}
 
+
+          for(int i=0; i<states.size(); ++i){
+            cout << i << ": " << states[i] << "  /  ";
+          }
+          cout << endl;
           // Calculate trajectories
           vector<int> future_lane_op;
-          if(lane==0){
-            future_lane_op.push_back(0);
-            future_lane_op.push_back(1);
-          }
-          if(lane==1){
-            future_lane_op.push_back(1);
-            future_lane_op.push_back(0);
-            future_lane_op.push_back(2);
-          }
-          if(lane==2){
-            future_lane_op.push_back(2);
-            future_lane_op.push_back(1);
+          for(int i=0; i<states.size(); ++i){
+            if(states[i] == "KL") { future_lane_op.push_back(lane); }
+            if(states[i] == "PLCL") { future_lane_op.push_back(lane-1); }
+            if(states[i] == "LCL") { future_lane_op.push_back(lane-1); }
+            if(states[i] == "PLCR") { future_lane_op.push_back(lane+1); }
+            if(states[i] == "LCR") { future_lane_op.push_back(lane+1); }
           }
 
+
           // Calculate cost for each lane option
-          vector<double> lane_cost(3);
-          for(int i=0; i<future_lane_op.size(); ++i){
-            double eff_cost = (speed_limit - max_speed[future_lane_op[i]]) / speed_limit;
-            double sec_cost = 0;
-            if(front_car_dist[future_lane_op[i]] < 25){
-              sec_cost += (25 - front_car_dist[future_lane_op[i]]) / 50;
-            }
-            if(back_car_dist[future_lane_op[i]] < 10 && future_lane_op[i] != lane){
-              sec_cost += (10 - back_car_dist[future_lane_op[i]]) / 20;
-            }
-            double lazy_cost = 0;
-            if(future_lane_op[i] != lane) { lazy_cost = 0.1; }
-            lane_cost[future_lane_op[i]] = eff_cost + sec_cost + lazy_cost;
+          vector<double> state_cost(3);
+          for(int i=0; i < states.size(); ++i){
+            state_cost[future_lane_op[i]] = calculate_cost(lane, future_lane_op[i], speed_limit,
+                                                      max_speed[future_lane_op[i]],
+                                                      front_car_dist[future_lane_op[i]],
+                                                      back_car_dist[future_lane_op[i]]);
           }
           // Choose lower cost
           double min_cost = 100.0;
           int pref_lane;
           for(int i=0; i<future_lane_op.size(); ++i){
-            if(lane_cost[future_lane_op[i]] < min_cost){
-              min_cost = lane_cost[future_lane_op[i]];
+            if(state_cost[future_lane_op[i]] < min_cost){
+              min_cost = state_cost[future_lane_op[i]];
               pref_lane = future_lane_op[i];
             }
           }
           // Print lane costs and preferred lane
 
           for(int i=0; i<max_speed.size(); ++i){
-            cout << "c: " << lane_cost[i] << "  /  ";
+            cout << "c: " << state_cost[i] << "  /  ";
           }
           cout << "   ---   " << pref_lane << endl;
           cout << endl;
