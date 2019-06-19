@@ -100,7 +100,7 @@ int main() {
            * TODO: define a path made up of (x,y) points that the car will visit
            *   sequentially every .02 seconds
            */
-          double lane = 1;
+          //double lane = 1;
           double speed_limit = 49.5;
 
           double pos_x;
@@ -111,17 +111,7 @@ int main() {
           double car_v = car_speed;
           int path_size = previous_path_x.size();
           // cout << car_d << endl;
-          if (car_v < speed_limit/2) {
-            car_v += 4;
-          }
-          else if (car_v < speed_limit-2) {
-            car_v += 1.5;
-          }
-          else{
-            car_v = speed_limit;
-          }
-          // 1mph = 1.609kmph = 1609/3600 mps = 0.4469 mps = 0.008938 meters in 0.02sec
-          double step_dist = 0.008938 * car_v;
+
 
           if (path_size == 0) {
             pos_x = car_x;
@@ -129,7 +119,8 @@ int main() {
             angle = deg2rad(car_yaw);
             pos_s = car_s;
             pos_d = car_d;
-          } else {
+          }
+          else {
             pos_x = previous_path_x[path_size-1];
             pos_y = previous_path_y[path_size-1];
             double pos_x2 = previous_path_x[path_size-2];
@@ -137,7 +128,39 @@ int main() {
             angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
             pos_s = end_path_s;
             pos_d = end_path_d;
-           }
+          }
+
+          int lane = pos_d / 4;
+          cout << lane << endl;
+
+          bool too_close = false;
+          double front_limit = speed_limit;
+          // Sensor fusion
+          for(int i=0; i<sensor_fusion.size(); ++i) {
+            // car in my lane
+            float d = sensor_fusion[i][6];
+            if(d < (2 + 4 * lane + 2) && d > (2 + 4 * lane - 2)){
+              double vx = sensor_fusion[i][3];
+              double vy = sensor_fusion[i][4];
+              double check_speed = sqrt(vx*vx+vy*vy);
+              double check_car_s = sensor_fusion[i][5];
+              check_car_s += (double)path_size * 0.02 * check_speed;
+              if(check_car_s > car_s && check_car_s < car_s + 35){
+                cout << "Approaching front car!!!" << endl;
+                too_close = true;
+                front_limit = check_speed;
+              }
+            }
+          }
+
+          if(too_close){
+            car_v -= (car_v - front_limit) / 10;
+            lane = 0;
+          }
+          else if(car_v < speed_limit - 0.5){
+            car_v += (speed_limit - car_v) / 10;
+          }
+
 
           // Set XY points bassed on some s-d points as basis for the spline
           vector<double> X, Y;
@@ -163,7 +186,10 @@ int main() {
           tk::spline s;
           s.set_points(X,Y);
 
-          for (int i = 0; i < 40; ++i) {
+          // 1mph = 1.609kmph = 1609/3600 mps = 0.4469 mps = 0.008938 meters in 0.02sec
+          double step_dist = 0.008938 * car_v;
+
+          for (int i = 0; i < 50; ++i) {
             if (i < path_size) {
               next_x_vals.push_back(previous_path_x[i]);
               next_y_vals.push_back(previous_path_y[i]);
