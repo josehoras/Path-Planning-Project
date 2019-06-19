@@ -135,31 +135,34 @@ int main() {
 
           // Calculate max speed on each lane
           vector<double> max_speed(3);
+          vector<double> front_car_dist(3);
           for(int check_lane = 0; check_lane<3; ++check_lane){
             vector<int> cars_in_lane;
             for(int i=0; i<sensor_fusion.size(); ++i) {
               double check_car_s = sensor_fusion[i][5];
               double check_car_d = sensor_fusion[i][6];
+              // If car is in our lane and is up to 50m in front of us
               if(int(check_car_d / 4) == check_lane &&
-                check_car_s > car_s && check_car_s < car_s + 35){
+                check_car_s > car_s && check_car_s < car_s + 50){
                 //cout << check_car_s << ", " << car_s << endl;
                 cars_in_lane.push_back(i);
               }
             }
+            // For cars in the lane in front of us, get the closest, its speed and position
+            // when we will be at car_s after path_size
+            front_car_dist[check_lane] = 500.0;
             if(cars_in_lane.size() > 0){
-              double closest_dist = 50.0;
               for(int i=0;i<cars_in_lane.size();++i){
-                double check_car_s = sensor_fusion[cars_in_lane[i]][5];
-                if(check_car_s - car_s < closest_dist){
-                  closest_dist = check_car_s - car_s;
-                  double vx = sensor_fusion[cars_in_lane[i]][3];
-                  double vy = sensor_fusion[cars_in_lane[i]][4];
-                  double check_speed = sqrt(vx*vx+vy*vy);
-                  // check speed in m/s
+                double vx = sensor_fusion[cars_in_lane[i]][3];
+                double vy = sensor_fusion[cars_in_lane[i]][4];
+                double front_car_v = sqrt(vx*vx+vy*vy);
+                double front_car_current_s = sensor_fusion[cars_in_lane[i]][5];
+                double front_car_s = front_car_current_s + front_car_v * path_size * 0.02;
+
+                if(front_car_s - car_s < front_car_dist[check_lane]){
+                  front_car_dist[check_lane] = front_car_s - car_s;
                   // 1 m/s = 3600 m/h = 3.6 km/h = 2.237 m/h
-                  check_speed = check_speed * 2.237;
-                  //cout << closest_dist << ", " << vx << ", " << vy << endl;
-                  max_speed[check_lane] = check_speed;
+                  max_speed[check_lane] = front_car_v * 2.237;
                 }
               }
             }
@@ -171,13 +174,22 @@ int main() {
             cout << i << ": " << max_speed[i] << "  /  ";
           }
           cout << endl;
+          for(int i=0; i<max_speed.size(); ++i){
+            cout << "s: " << front_car_dist[i] << "  /  ";
+          }
+          cout << endl;
 
           // Adjust car velocity to our car lane
           if(max_speed[lane] == speed_limit){
             car_v += (max_speed[lane]  - car_v) / 10;
           }
           else{
-            car_v += (max_speed[lane] - 3 - car_v) / 6;
+            if(front_car_dist[lane] > 25){
+              car_v += (max_speed[lane] - car_v) / 8;
+            }
+            else{
+              car_v += (max_speed[lane] - 5 - car_v) / 5;
+            }
           }
 
 
