@@ -132,11 +132,12 @@ int main() {
             pos_d = end_path_d;
           }
 
-          int lane = pos_d / 4;
+          int goal_lane = pos_d / 4;
+          int current_lane = car_d / 4;
           //cout << car_state << endl;
 
 
-          // Calculate max speed on each lane
+          // Calculate max speed, next front and next back car on each lane
           vector<double> max_speed(3);
           vector<double> front_car_dist(3);
           vector<double> back_car_dist(3);
@@ -187,15 +188,15 @@ int main() {
           }
           cout << endl;
           // Adjust car velocity to our car lane
-          if(max_speed[lane] == speed_limit){
-            car_v += (max_speed[lane]  - car_v) / 10;
+          if(max_speed[current_lane] == speed_limit){
+            car_v += (max_speed[current_lane]  - car_v) / 10;
           }
           else{
-            if(front_car_dist[lane] > 25){
-              car_v += (max_speed[lane] - car_v) / 8;
+            if(front_car_dist[current_lane] > 25){
+              car_v += (max_speed[current_lane] - car_v) / 8;
             }
             else{
-              car_v += (max_speed[lane] - 5 - car_v) / 5;
+              car_v += (max_speed[current_lane] - 5 - car_v) / 5;
             }
           }
 
@@ -203,61 +204,55 @@ int main() {
           vector<string> states;
           states.push_back("KL");
           if(car_state == "KL") {
-            if (lane != 0) { states.push_back("PLCL"); }
-            if (lane != 2) { states.push_back("PLCR"); }
-          } else if (car_state == "PLCL" && lane != 0) {
+            if (current_lane != 0) { states.push_back("PLCL"); }
+            if (current_lane != 2) { states.push_back("PLCR"); }
+          } else if (car_state == "PLCL" && current_lane != 0) {
               states.push_back("PLCL");
               states.push_back("LCL");
-          } else if (car_state == "PLCR" && lane != 2) {
+          } else if (car_state == "PLCR" && current_lane != 2) {
               states.push_back("PLCR");
               states.push_back("LCR");
           }
           else if (car_state == "LCL") { states.push_back("LCL");}
           else if (car_state == "LCR") { states.push_back("LCR");}
 
-
           for(int i=0; i<states.size(); ++i){
             cout << i << ": " << states[i] << "  /  ";
           }
           cout << endl;
-          // Calculate trajectories
-          vector<int> future_lane_op;
-          for(int i=0; i<states.size(); ++i){
-            if(states[i] == "KL") { future_lane_op.push_back(lane); }
-            if(states[i] == "PLCL") { future_lane_op.push_back(lane-1); }
-            if(states[i] == "LCL") { future_lane_op.push_back(lane-1); }
-            if(states[i] == "PLCR") { future_lane_op.push_back(lane+1); }
-            if(states[i] == "LCR") { future_lane_op.push_back(lane+1); }
-          }
-
 
           // Calculate cost for each lane option
-          vector<double> state_cost(3);
+          vector<double> state_cost;
           for(int i=0; i < states.size(); ++i){
-            state_cost[future_lane_op[i]] = calculate_cost(lane, future_lane_op[i], speed_limit,
-                                                      max_speed[future_lane_op[i]],
-                                                      front_car_dist[future_lane_op[i]],
-                                                      back_car_dist[future_lane_op[i]]);
+            state_cost.push_back(calculate_cost(current_lane, goal_lane, states[i], speed_limit,
+                                  max_speed, front_car_dist, back_car_dist));
           }
           // Choose lower cost
           double min_cost = 100.0;
-          int pref_lane;
-          for(int i=0; i<future_lane_op.size(); ++i){
-            if(state_cost[future_lane_op[i]] < min_cost){
-              min_cost = state_cost[future_lane_op[i]];
-              pref_lane = future_lane_op[i];
+          string pref_state;
+          for(int i=0; i<states.size(); ++i){
+            if(state_cost[i] < min_cost){
+              min_cost = state_cost[i];
+              pref_state = states[i];
             }
           }
-          // Print lane costs and preferred lane
 
+          // Choose trajectory for preferred state
+          int pref_lane = current_lane;
+          string dir = pref_state.substr(pref_state.size() - 2);
+          if(dir == "CL") {  pref_lane = current_lane-1; }
+          if(dir == "CR") {  pref_lane = current_lane+1; }
+
+          // Print lane costs and preferred lane
           for(int i=0; i<max_speed.size(); ++i){
-            cout << "c: " << state_cost[i] << "  /  ";
+            cout << "c: " << state_cost[i] <<"  /  ";
           }
           cout << "   ---   " << pref_lane << endl;
           cout << endl;
 
           // Change to preferred lane!
-          lane = pref_lane;
+          goal_lane = pref_lane;
+
           // Set XY points bassed on some s-d points as basis for the spline
           vector<double> X, Y;
           vector<double> coord;
@@ -265,7 +260,7 @@ int main() {
           Y.push_back(pos_y);
           for (int i = 1; i < 4; ++i){
             double next_s = pos_s + i * 20;
-            double next_d = (2 + 4 * lane);
+            double next_d = (2 + 4 * goal_lane);
             coord = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
             X.push_back(coord[0]);
             Y.push_back(coord[1]);

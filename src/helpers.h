@@ -154,20 +154,31 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s,
   return {x,y};
 }
 
-double calculate_cost (int current_lane, int planned_lane, double speed_limit,
-                   double max_speed, double front_car_dist, double back_car_dist) {
+double calculate_cost (int current_lane, int goal_lane, string state, double speed_limit,
+                   vector<double> max_speed, vector<double> front_car_dist,
+                   vector<double> back_car_dist) {
 
-  double eff_cost = (speed_limit - max_speed) / speed_limit;
+
+  int intended_lane = current_lane;
+  string dir = state.substr(state.size() - 2);
+  if(dir == "CL" && current_lane != 0) { intended_lane = current_lane-1; }
+  if(dir == "CR" && current_lane != 2) { intended_lane = current_lane+1; }
+
+
+  double keep_plan = 0;
+  if(goal_lane == intended_lane)
+    keep_plan = -0.5;
+  double eff_cost = (speed_limit - max_speed[intended_lane]) / speed_limit;
   double sec_cost = 0;
-  if(front_car_dist < 25){
-    sec_cost += (25 - front_car_dist) / 50;
+  if(front_car_dist[intended_lane] < 25){
+    sec_cost += (25 - front_car_dist[intended_lane]) / 50;
   }
-  if(back_car_dist < 10 && planned_lane != current_lane){
-    sec_cost += (10 - back_car_dist) / 20;
+  if(back_car_dist[intended_lane] < 15 && intended_lane != current_lane){
+    sec_cost += (15 - back_car_dist[intended_lane]) / 30;
   }
   double lazy_cost = 0;
-  if(planned_lane != current_lane) { lazy_cost = 0.1; }
-  return eff_cost + sec_cost + lazy_cost;
+  if(intended_lane != current_lane) { lazy_cost = 0.1; }
+  return eff_cost + sec_cost + lazy_cost + keep_plan;
 
 }
 
