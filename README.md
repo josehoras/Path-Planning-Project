@@ -2,7 +2,7 @@
 
 [Self-Driving Car Engineer Nanodegree Program](https://eu.udacity.com/course/self-driving-car-engineer-nanodegree--nd013)
 
-In this project I implemented the C++ algorithms for a car to drive safely on a highway simulation with other cars driving a different speeds. My car manages to adapt to the highway traffic speed, changing lanes when safe in order to drive faster, and keeping below the 50 MPH speed limit and within its lane.
+In this project I implemented the C++ algorithms for a car to drive safely on a highway simulation with other cars driving a different speeds. My car manages to adapt to the highway traffic, change lanes when safe in order to drive faster, while keeping below the 50 MPH speed limit and within its lane.
 
 The main elements implemented are:
 
@@ -14,6 +14,8 @@ The deliverables for the project are:
 
 - [C++ code](./Traffic_Sign_Classifier.ipynb) contained in helpers.cpp and main.cpp
 - [A writeup report](./writeup.md) (markdown)
+
+Please, check the write-up for a detailed analysis.
 
 ### Goals
 In this project your goal is to safely navigate around a virtual highway with other traffic that is driving +-10 MPH of the 50 MPH speed limit. You will be provided the car's localization and sensor fusion data, there is also a sparse map list of waypoints around the highway. The car should try to go as close as possible to the 50 MPH speed limit, which means passing slower traffic when possible, note that other cars will try to change lanes too. The car should avoid hitting other cars at all cost as well as driving inside of the marked road lanes at all times, unless going from one lane to another. The car should be able to make one complete loop around the 6946m highway. Since the car is trying to go 50 MPH, it should take a little over 5 minutes to complete 1 loop. Also the car should not experience total acceleration over 10 m/s^2 and jerk that is greater than 10 m/s^3.
