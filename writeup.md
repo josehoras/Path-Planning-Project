@@ -40,10 +40,24 @@ On the first cycle there will be of course no path leftover and the initial posi
 
 The quantities of interest are the last position on Frenet coordinates, the last and the one before last positions of the previous path in map x, y coordinates. From these last two positions I calculate the car's angle and its velocity. Having these two points will also be necessary to generate the next trajectory using the spline curve.
 
+```
+pred_x = previous_path_x[path_size-1];
+pred_y = previous_path_y[path_size-1];
+pred_x2 = previous_path_x[path_size-2];
+pred_y2 = previous_path_y[path_size-2];
+pred_phi = atan2(pred_y-pred_y2,pred_x-pred_x2);
+double last_dist = sqrt(pow(pred_y-pred_y2,2) + pow(pred_x-pred_x2, 2));
+car.pred_vel = last_dist/0.02;
+pred_s = end_path_s;
+pred_d = end_path_d;
+```
 
+Finally I also calculate predicted car lane and a boolean flag that indicates whether the car is currently changing lanes.
 
-
-
+```
+car.pred_lane = pred_d / 4;
+bool changing_lanes = (car.pred_lane != car.goal_lane);
+```
 
 
 
