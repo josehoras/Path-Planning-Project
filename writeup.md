@@ -59,10 +59,33 @@ car.pred_lane = pred_d / 4;
 bool changing_lanes = (car.pred_lane != car.goal_lane);
 ```
 
+The following section of the code refers to predicting the others cars positions when my car is at the predicted point. I will use this information to determine, for each lane, whether there is a car near me, either on the back or at the front, and based on this the maximal speed allowed at each lane.
 
+First I reduce the amount of calculation by storing in the vector `cars_in_lane` only the cars closest than 50 meters on the front or behind. Next I loop over this vector and choose the closest one on the front or behind, and store its distance from my car and velocity in the vectors:
 
+ ```
+vector<double> front_car_dist(3, 500);
+vector<double> back_car_dist(3, 500);
+vector<double> front_car_vel(3, -1);
+vector<double> back_car_vel(3, -1);
+ ```
 
+Having the distance and speed of the closest car in front of us on each lane, we can determine the maximal speed that our car will be able to drive on each lane. My first attempt was to set this velocity equal to the car in front of me, but this realistic and dynamic enough for some cases I encountered on the simulator. So, I finally set the speed with the following formula: when the next car is 30m in front I began to adapt my speed to it linearly so that I set its same speed when it is 15 meters in front of me. If the distance if further reduced for some reason I continue this linearity down to an even lower speed that the car in front of me has. That way I will expand the buffer back to the 15m safety distance.
 
+This formula can be expressed as a linear function Y = X * A + B, with the indexes A and B properly chosen as shown in the code snippet below.
 
+![speed function](speed_funct.jpg)
 
+```
+for(int check_lane = 0; check_lane<3; ++check_lane){
+  if(front_car_dist[check_lane] < 30){
+    double A = (speed_limit - front_car_vel[check_lane]) / 15;
+    double B = 2*front_car_vel[check_lane] - speed_limit;
+    max_speed[check_lane] = A * front_car_dist[check_lane] + B;
+  }
+  else{
+    max_speed[check_lane] = speed_limit;
+  }
+}
+```
 
