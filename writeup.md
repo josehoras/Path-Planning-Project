@@ -74,7 +74,7 @@ Having the distance and speed of the closest car in front of us on each lane, we
 
 This formula can be expressed as a linear function Y = X * A + B, with the indexes A and B properly chosen as shown in the code snippet below.
 
-![speed function](speed_funct.jpg)
+![speed function](speed_funct.png)
 
 ```
 for(int check_lane = 0; check_lane<3; ++check_lane){
