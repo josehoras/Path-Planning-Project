@@ -123,13 +123,65 @@ Depending on the new state chosen, the trajectory will be defined by two paramet
 
 Next, the current predicted velocity is adjusted for the next cycle taking into account the new goal velocity. I simply add or subtract a certain value to the velocity in order to come closer to the goal velocity. Different values are given if the velocity is close to zero, as more acceleration can be given, and if the velocity is close to the speed limit, as I want to be sure the car does not exceed this limit. The chosen values effect a proper dynamic in our car, not taking too long to start moving, and changing speed timely according to road conditions.
 
-Finally, the next trajectory is calculated with the help of the `spline.h` library. This method is recommended in the project description as an easy off the shelf solution. The implementation of the algorithm follows closely the one presented in the Project Q&A by Aaron Brown.
+Finally, the next trajectory is calculated with the help of the `spline.h` library. This method is recommended in the project description as an easy off the shelf solution. 
 
 A different route would have been to calculate the route using a quintic polynomial that minimizes the jerk. This implementation was discussed in the lesson, and I explored this route too. However, there were some challenges in this implementation:
-- The boundary conditions, as chosen in the lesson implementation, are {s, s&#775;,  s&#775;&#775;, s&#776; }
 
-  h<sub>&theta;</sub>(x) = s&#775;&#775; =theta;<sub>1</sub>x
+- The boundary conditions, as chosen in the lesson implementation, are {s<sub>i</sub>, s&#775;<sub>i</sub>,  s&#775;&#775;<sub>i</sub>} and {s<sub>f</sub>, s&#775;<sub>f</sub>,  s&#775;&#775;<sub>f</sub>}. s<sub>f</sub> represents the final position where the final speed of the car is reached. However, this position still depends on the time we judge correct to finish the maneuver. This additional parameter depends also on the road conditions, and adds a level of complexity to the algorithm.
+- Further boundaries conditions that we need but were not treated in the lesson, are the maximal absolute values of velocity, acceleration, and jerk. Without these the polynomial for a Jerk minimizing trajectory normally choose trajectories with higher speed and acceleration than allowed. How to implement these boundary conditions in the matrices operations was not clear to me.
+
+After considering the two options, I considered the spline implementation to be the most robust and elegant. The implementation of the algorithm follows closely the one presented in the Project Q&A by Aaron Brown.
+
+First, some anchor points are chosen to define the spline. To ensure continuity of the curve with the previous trajectory, the two last points of the previous path are taken. Additionally, we take three points down the lane separated on 30 meters steps.
+
+```
+X.push_back(pred_x2);
+Y.push_back(pred_y2);
+X.push_back(pred_x);
+Y.push_back(pred_y);
+for (int i = 1; i < 4; ++i){
+  double next_s = pred_s + i * 30;
+  double next_d = (2 + 4 * car.goal_lane);
+  coord = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+  X.push_back(coord[0]);
+  Y.push_back(coord[1]);
+}
+```
+
+These points are here defined on the maps X, Y coordinates. These coordinates present a problem defining the spline, in that if the curve is almost vertical (big variation on Y, and small variation on X) the Y dependence on X will be imprecise. Being the spline a curve, it can also happen that for one value of X, two values on Y belong to the spline. To minimize this problem, we change the reference of coordinates to our own car coordinates. In this frame the spline we want to calculate is almost horizontal. 
+
+```
+X[i] = (shift_x * cos(0-pred_phi) - shift_y*sin(0-pred_phi));
+Y[i] = (shift_x * sin(0-pred_phi) + shift_y*cos(0-pred_phi));
+```
+
+The spline is created according to the library instructions:
+
+```
+tk::spline s;
+s.set_points(X,Y);
+```
+
+And in a final loop, we add the remainder points that together with the previous path will sum a new batch of 50 points to feed the simulator. These points are spaced according to the last defined velocity:
+```
+step_dist =  car.pred_vel * 0.02;
+```
+
+We add successively this distance to each location, convert back to map coordinates, and append to the new path:
+
+```
+new_car_x += step_dist;
+new_car_y = s(new_car_x);
+double new_x = pred_x + new_car_x * cos(pred_phi) - new_car_y * sin(pred_phi);
+double new_y = pred_y + new_car_x * sin(pred_phi) + new_car_y * cos(pred_phi);
+next_x_vals.push_back(new_x);
+next_y_vals.push_back(new_y);
+```
+
+## Results
+
+The simulation run very good using this algorithm. All points in the project rubric were achieved and the simulation was able to run up to one hour straight without incidents and with an average speed of 46.5 MPH, which demonstrates that the car was able to navigate its way around the traffic and not be stuck behind a slow driving car.
+
+![one hour driving](one_hour.png)
 
 
-\begin{equation} a + b = c \end{equation}
-\sum_{\forall i}{x_i^{2}} 
