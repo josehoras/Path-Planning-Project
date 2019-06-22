@@ -12,7 +12,7 @@ The main elements implemented are:
 
 The deliverables for the project are:
 
-- [C++ code](./Traffic_Sign_Classifier.ipynb) contained in helpers.cpp and main.cpp
+- [C++ code](./src) contained in helpers.cpp and main.cpp
 - [A writeup report](./writeup.md) (markdown)
 
 Please, check the write-up for a detailed analysis.
