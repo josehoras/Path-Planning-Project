@@ -127,7 +127,30 @@ The cost function is placed in the file `helpers.h`, in the `calculate_cost()` f
 - **Efficiency cost:** penalizes states in lanes with lower speeds, that have cars on it, even if they still don't limit our speed, and favors changing to the middle lane if the next one is empty. 
 
 	This last component contribute to avoid situations where our car is stuck in the lateral lane by a slow car and a slightly slower car in the center lane. Even when changing to the center lane will not makes our car drive faster, the presence of the other empty lane to the side reduces the cost of this option, as we can change to it and pass both cars.
+	
+```
+double eff_cost = (speed_limit - max_speed[next_lane]) / speed_limit;
+if(front_car_dist[next_lane] < 100)
+  eff_cost += 0.04;
+if (next_state!="KL" && next_lane==1 && max_speed[1] < (speed_limit -5)){
+  if(  (next_state=="LCL" && max_speed[0] == speed_limit && back_car_dist[0] > 5)
+    || (next_state=="LCR" && max_speed[2] == speed_limit && back_car_dist[2] > 5))
+    eff_cost -= 0.15;
+}
+```
 - **Security cost:** penalizes a state if other cars are too close to us either on the front or behind. In practice this cost is relevant to decide whether it is safe to change lanes.
+
+```
+double sec_cost = 0;
+double sec_dist_front = 7.5;
+double sec_dist_back = 5;
+if(front_car_dist[next_lane] < sec_dist_front){
+  sec_cost += (sec_dist_front - front_car_dist[next_lane]) / (sec_dist_front*2);
+}
+if(back_car_dist[next_lane] < sec_dist_back && next_lane != current_lane){
+  sec_cost += (sec_dist_back - back_car_dist[next_lane]) / (sec_dist_back*2);
+}
+```
 - **Lazy cost:** A small cost that discourage the car to change state with no reason. In case two states have the same cost, our car will prefer to keep its current state.
 - **Keep Action cost:** If the car is currently in the middle of changing lanes, to abandon LCL or LCR state is penalized. This eliminates doubt in the middle of a maneuver that can be dangerous, and only trace back if there is a big enough reason, like the security cost.
 
