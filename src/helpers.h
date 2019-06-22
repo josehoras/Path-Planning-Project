@@ -181,8 +181,8 @@ double calculate_cost (string next_state, int current_lane, bool changing_lanes,
   }
   // Security cost to not get near other cars when changing lanes
   double sec_cost = 0;
-  int sec_dist_front = 7.5;
-  int sec_dist_back = 5;
+  double sec_dist_front = 7.5;
+  double sec_dist_back = 5;
   if(front_car_dist[next_lane] < sec_dist_front){
     sec_cost += (sec_dist_front - front_car_dist[next_lane]) / (sec_dist_front*2);
   }
