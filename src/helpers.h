@@ -9,6 +9,7 @@
 using std::string;
 using std::vector;
 
+
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
 //   else the empty string "" will be returned.
@@ -154,7 +155,7 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s,
   return {x,y};
 }
 
-int get_intended_lane(int current_lane, string state){
+int get_lane(int current_lane, string state){
   int intended_lane = current_lane;
   string dir = state.substr(state.size() - 2);
   if(dir == "CL" && current_lane != 0) { intended_lane = current_lane-1; }
@@ -162,45 +163,57 @@ int get_intended_lane(int current_lane, string state){
   return intended_lane;
 }
 
-double calculate_cost (int current_lane, int goal_lane, string state, double speed_limit,
-                   vector<double> max_speed, vector<double> front_car_dist,
-                   vector<double> back_car_dist) {
-
-
-  int intended_lane = get_intended_lane(current_lane, state);
-
-  double keep_change = 0;
-  if(state == "LCL" || state=="LCR"){
-    if(goal_lane == intended_lane && goal_lane!=current_lane)
-      keep_change = -0.5;
+double calculate_cost (string next_state, int current_lane, bool changing_lanes, double speed_limit,
+                        vector<double> max_speed, vector<double> front_car_dist,
+                        vector<double> back_car_dist)
+{
+  int next_lane = get_lane(current_lane, next_state);
+  // Efficiency cost based on lane max speed
+  double eff_cost = (speed_limit - max_speed[next_lane]) / speed_limit;
+  // Penalization for a lane with car on it, even if they still don't limit our speed
+  if(front_car_dist[next_lane] < 100)
+    eff_cost += 0.04;
+  // Bonus to change to middle lane if the next one is empty
+  if (next_state!="KL" && next_lane==1 && max_speed[1] < (speed_limit -5)){
+    if(  (next_state=="LCL" && max_speed[0] == speed_limit && back_car_dist[0] > 5)
+      || (next_state=="LCR" && max_speed[2] == speed_limit && back_car_dist[2] > 5))
+      eff_cost -= 0.15;
   }
-  double eff_cost = (speed_limit - max_speed[intended_lane]) / speed_limit;
+  // Security cost to not get near other cars when changing lanes
   double sec_cost = 0;
-  if(front_car_dist[intended_lane] < 25){
-    sec_cost += (25 - front_car_dist[intended_lane]) / 50;
+  int sec_dist_front = 5;
+  int sec_dist_back = 5;
+  if(front_car_dist[next_lane] < sec_dist_front){
+    sec_cost += (sec_dist_front - front_car_dist[next_lane]) / (sec_dist_front*2);
   }
-  if(back_car_dist[intended_lane] < 15 && intended_lane != current_lane){
-    sec_cost += (15 - back_car_dist[intended_lane]) / 30;
+  if(back_car_dist[next_lane] < sec_dist_back && next_lane != current_lane){
+    sec_cost += (sec_dist_back - back_car_dist[next_lane]) / (sec_dist_back*2);
   }
+  // Small cost to discourage the car to change lanes with no reason
   double lazy_cost = 0;
-  if(intended_lane != current_lane) { lazy_cost = 0.1; }
-  return eff_cost + sec_cost + lazy_cost + keep_change;
+  if(next_lane != current_lane) { lazy_cost = 0.05; }
+  // Cost to discourage the car to abort a change lane action while still changing lanes
+  double keep_action_cost = 0;
+  if(next_state=="KL" && changing_lanes)
+    keep_action_cost = 0.9;
 
+  return eff_cost + 10 * sec_cost + lazy_cost + keep_action_cost;
 }
 
-vector<double> generate_trajectory(string pref_state, int current_lane, int goal_lane,
-                                     double speed_limit, vector<double> max_speed,
-                                     vector<double> front_car_dist, vector<double> back_car_dist){
+vector<double> set_goals(string next_state, int current_lane, vector<double> max_speed)
+{
+  double goal_lane;
 
-  double intended_lane;
-  double goal_vel;
+  if(next_state == "KL")
+    goal_lane = current_lane;
+  if(next_state == "LCL")
+    goal_lane = current_lane - 1;
+  if(next_state == "LCR")
+    goal_lane = current_lane + 1;
 
-  if(pref_state == "KL"){
-    intended_lane = current_lane;
-    goal_vel = max_speed[intended_lane];
-  }
-  return {intended_lane, goal_vel};
+  double goal_vel = max_speed[goal_lane];
+
+  return {goal_lane, goal_vel};
 }
-
 
 #endif  // HELPERS_H
