@@ -148,7 +148,7 @@ car.state = pref_state;
 
 Depending on the new state chosen, the trajectory will be defined by two parameters: the goal lane we want to be in, and the goal velocity, corresponding to that lane. The logic to assign those goals is contained in `helpers.h`, function `set_goals()`.
 
-Next, the current predicted velocity is adjusted for the next cycle taking into account the new goal velocity. I simply add or subtract a certain value to the velocity in order to come closer to the goal velocity. Different values are given if the velocity is close to zero, as more acceleration can be given, and if the velocity is close to the speed limit, as I want to be sure the car does not exceed this limit. The chosen values effect a proper dynamic in our car, not taking too long to start moving, and changing speed timely according to road conditions.
+Next, the current predicted velocity is adjusted for the next cycle taking into account the new goal velocity. I simply add or subtract a certain value to the velocity in order to come closer to the goal velocity. Different values are given if the velocity is close to zero, as more acceleration can be given, and if the velocity is close to the speed limit, as I want to be sure the car does not exceed this limit. The chosen values effect a proper dynamic in our car, not taking too long to start moving, and changing speed timely according to road conditions, always keeping below the speed, acceleration, and jerk limits.
 
 Finally, the next trajectory is calculated with the help of the `spline.h` library. This method is recommended in the project description as an easy off the shelf solution. 
 
