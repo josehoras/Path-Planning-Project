@@ -175,7 +175,7 @@ for (int i = 1; i < 4; ++i){
 }
 ```
 
-These points are here defined on the maps X, Y coordinates. These coordinates present a problem defining the spline, in that if the curve is almost vertical (big variation on Y, and small variation on X) the Y dependence on X will be imprecise. Being the spline a curve, it can also happen that for one value of X, two values on Y belong to the spline. To minimize this problem, we change the reference of coordinates to our own car coordinates. In this frame the spline we want to calculate is almost horizontal. 
+These points are here defined on the map's X, Y coordinates. These coordinates present a problem defining the spline, in that if the curve is almost vertical (big variation on Y, and small variation on X) the Y dependence on X will be imprecise. Being the spline a curve, it can also happen that for one value of X, two values on Y belong to the spline. To minimize this problem, we change the reference of coordinates to our own car coordinates. In this frame the spline we want to calculate is almost horizontal. 
 
 ```
 X[i] = (shift_x * cos(0-pred_phi) - shift_y*sin(0-pred_phi));
