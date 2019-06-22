@@ -157,7 +157,7 @@ A different route would have been to calculate the route using a quintic polynom
 - The boundary conditions, as chosen in the lesson implementation, are {s<sub>i</sub>, s&#775;<sub>i</sub>,  s&#776;<sub>i</sub>} and {s<sub>f</sub>, s&#775;<sub>f</sub>,  s&#776;<sub>f</sub>}. s<sub>f</sub> represents the final position where the final speed of the car is reached. However, this position still depends on the time we judge correct to finish the maneuver. This additional parameter depends also on the road conditions, and adds a level of complexity to the algorithm.
 - Further boundaries conditions were not treated in the lesson, like the maximal absolute values of velocity, acceleration, and jerk. Without these, the polynomial for a Jerk minimizing trajectory normally chooses trajectories with higher speed and acceleration than allowed. How to implement these boundary conditions in the matrices operations was not clear to me.
 
-After considering the two options, I considered the spline implementation to be the most robust and elegant. The implementation of the algorithm follows closely the one presented in the Project Q&A by Aaron Brown.
+After pondering the two options, I considered the spline implementation to be the most robust and elegant. The implementation of the algorithm follows closely the one presented in the Project Q&A by Aaron Brown.
 
 First, some anchor points are chosen to define the spline. To ensure continuity of the curve with the previous trajectory, the two last points of the previous path are taken. Additionally, we take three points down the lane separated on 30 meters steps.
 
