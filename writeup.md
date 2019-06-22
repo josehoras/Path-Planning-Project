@@ -18,6 +18,20 @@ The main part of the code was implemented in `main.cpp`, while some functions wh
 
 ## main.cpp
 
+At the beginning of `main.cpp`, before its `main()` function, I declare a data structure to store the relevant variables to our car's state. This will be used later in order to plan the car's behavior using a finite state machine. 
+
+ ```
+struct Car{
+  int pred_lane;
+  int goal_lane;
+  double pred_vel;
+  double goal_vel;
+  string state;
+};
+```
+
+At the beginning of the `main()` function the car's state is initialized.
+
 The architecture to communicate with the simulator is already given here. The central part of the program begins when the simulator delivers data from line 97: `if (event == "telemetry") {`
 
 After this the data coming from the simulator is stored in several variables and the vectors used to deliver the next path locations to our car are declared:
@@ -127,7 +141,7 @@ Finally, the next trajectory is calculated with the help of the `spline.h` libra
 
 A different route would have been to calculate the route using a quintic polynomial that minimizes the jerk. This implementation was discussed in the lesson, and I explored this route too. However, there were some challenges in this implementation:
 
-- The boundary conditions, as chosen in the lesson implementation, are {s<sub>i</sub>, s&#775;<sub>i</sub>,  s&#776;<sub>i</sub>} and {s<sub>f</sub>, s&#775;<sub>f</sub>,  s&#782;<sub>f</sub>}. s<sub>f</sub> represents the final position where the final speed of the car is reached. However, this position still depends on the time we judge correct to finish the maneuver. This additional parameter depends also on the road conditions, and adds a level of complexity to the algorithm.
+- The boundary conditions, as chosen in the lesson implementation, are {s<sub>i</sub>, s&#775;<sub>i</sub>,  s&#776;<sub>i</sub>} and {s<sub>f</sub>, s&#775;<sub>f</sub>,  s&#776;<sub>f</sub>}. s<sub>f</sub> represents the final position where the final speed of the car is reached. However, this position still depends on the time we judge correct to finish the maneuver. This additional parameter depends also on the road conditions, and adds a level of complexity to the algorithm.
 - Further boundaries conditions that we need but were not treated in the lesson, are the maximal absolute values of velocity, acceleration, and jerk. Without these the polynomial for a Jerk minimizing trajectory normally choose trajectories with higher speed and acceleration than allowed. How to implement these boundary conditions in the matrices operations was not clear to me.
 
 After considering the two options, I considered the spline implementation to be the most robust and elegant. The implementation of the algorithm follows closely the one presented in the Project Q&A by Aaron Brown.
