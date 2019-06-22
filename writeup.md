@@ -12,7 +12,7 @@ The goals for the project are described in the [Project's Rubric](https://review
 - The car stays in its lane, except for the time between changing lanes.
 - The car is able to change lanes
 
-All the goals were fulfilled in the final implementation of the code.
+All the goals were fulfilled in the final implementation of the code, and the vehicle was able to drive for more than an hour without incidents.
 
 The main part of the code was implemented in `main.cpp`, while some functions where placed in `helpers.h` to improve readability and modularity to the code.
 
@@ -155,7 +155,7 @@ Finally, the next trajectory is calculated with the help of the `spline.h` libra
 A different route would have been to calculate the route using a quintic polynomial that minimizes the jerk. This implementation was discussed in the lesson, and I explored this route too. However, there were some challenges in this implementation:
 
 - The boundary conditions, as chosen in the lesson implementation, are {s<sub>i</sub>, s&#775;<sub>i</sub>,  s&#776;<sub>i</sub>} and {s<sub>f</sub>, s&#775;<sub>f</sub>,  s&#776;<sub>f</sub>}. s<sub>f</sub> represents the final position where the final speed of the car is reached. However, this position still depends on the time we judge correct to finish the maneuver. This additional parameter depends also on the road conditions, and adds a level of complexity to the algorithm.
-- Further boundaries conditions were not treated in the lesson, like the maximal absolute values of velocity, acceleration, and jerk. Without these, the polynomial for a Jerk minimizing trajectory normally choose trajectories with higher speed and acceleration than allowed. How to implement these boundary conditions in the matrices operations was not clear to me.
+- Further boundaries conditions were not treated in the lesson, like the maximal absolute values of velocity, acceleration, and jerk. Without these, the polynomial for a Jerk minimizing trajectory normally chooses trajectories with higher speed and acceleration than allowed. How to implement these boundary conditions in the matrices operations was not clear to me.
 
 After considering the two options, I considered the spline implementation to be the most robust and elegant. The implementation of the algorithm follows closely the one presented in the Project Q&A by Aaron Brown.
 
@@ -207,7 +207,7 @@ next_y_vals.push_back(new_y);
 
 ## Results
 
-The simulation run very good using this algorithm. All points in the project rubric were achieved and the simulation was able to run up to one hour straight without incidents and with an average speed of 46.5 MPH, which demonstrates that the car was able to navigate its way around the traffic and not be stuck behind a slow driving car.
+The simulation runs very good using this algorithm. All points in the project rubric were achieved and the simulation was able to run up to one hour straight without incidents and with an average speed of 46.5 MPH, which demonstrates that the car was able to navigate its way around the traffic and not be stuck behind a slow driving car.
 
 ![one hour driving](one_hour.png)
 
