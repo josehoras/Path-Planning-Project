@@ -124,7 +124,8 @@ After knowing which states are available for the next cycle, the decision which 
 
 The cost function is placed in the file `helpers.h`, in the `calculate_cost()` function. The total cost is given by the addition of four cost components:
 
-- Efficiency cost: penalizes states in lanes with lower speeds, that have cars on it, even if they still don't limit our speed, and favors changing to the middle lane if the next one is empty. This last component contribute to avoid situations where our car is stuck in the lateral lane by a slow car and a slightly slower car in the center lane. Even when changing to the center lane will not makes our car drive faster, the presence of the other empty lane to the side reduces the cost of this option, as we can change to it and pass both cars.
+- Efficiency cost: penalizes states in lanes with lower speeds, that have cars on it, even if they still don't limit our speed, and favors changing to the middle lane if the next one is empty. 
+	This last component contribute to avoid situations where our car is stuck in the lateral lane by a slow car and a slightly slower car in the center lane. Even when changing to the center lane will not makes our car drive faster, the presence of the other empty lane to the side reduces the cost of this option, as we can change to it and pass both cars.
 - Security cost: penalizes a state if other cars are too close to us either on the front or behind. In practice this cost is relevant to decide whether it is safe to change lanes.
 - Lazy cost: A small cost that discourage the car to change state with no reason. In case two states have the same cost, our car will prefer to keep its current state.
 - Keep Action cost: If the car is currently in the middle of changing lanes, to abandon LCL or LCR state is penalized. This eliminates doubt in the middle of a maneuver that can be dangerous, and only trace back if there is a big enough reason, like the security cost.
