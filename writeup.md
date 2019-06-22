@@ -84,7 +84,7 @@ vector<double> front_car_vel(3, -1);
 vector<double> back_car_vel(3, -1);
  ```
 
-Having the distance and speed of the closest car in front of us on each lane, we can determine the maximal speed that our car will be able to drive on each lane. My first attempt was to set this velocity equal to the car in front of me, but this realistic and dynamic enough for some cases I encountered on the simulator. So, I finally set the speed with the following formula: when the next car is 30m in front I began to adapt my speed to it linearly so that I set its same speed when it is 15 meters in front of me. If the distance if further reduced for some reason I continue this linearity down to an even lower speed that the car in front of me has. That way I will expand the buffer back to the 15m safety distance.
+Having the distance and speed of the closest car in front of us on each lane, we can determine the maximal speed that our car will be able to drive on each lane. My first attempt was to set this velocity equal to the car in front of me, but this wasn't realistic and dynamic enough for some cases that I encountered on the simulator. So, I finally set the speed with the following formula: when the next car is 30m in front I began to adapt my speed to it linearly so that I set its same speed when it is 15 meters in front of me. If the distance if further reduced for some reason I continue this linearity down to an even lower speed that the car in front of me has. That way I will expand the buffer back to the 15m safety distance.
 
 This formula can be expressed as a linear function Y = X * A + B, with the indexes A and B properly chosen as shown in the code snippet below.
 
