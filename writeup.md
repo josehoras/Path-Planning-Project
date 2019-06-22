@@ -131,5 +131,5 @@ A different route would have been to calculate the route using a quintic polynom
   h<sub>&theta;</sub>(x) = s&#775;&#775; =theta;<sub>1</sub>x
 
 
-
-$ \sum_{\forall i}{x_i^{2}} $
+\begin{equation} a + b = c \end{equation}
+\sum_{\forall i}{x_i^{2}} 
