@@ -46,6 +46,7 @@ From here begins my own implementation of the code. The structure of my code can
 - **Behavior Planning** of my car using costs functions to evaluate which lane to use
 - **Trajectory Generation** to accelerate, keep in lane speed, and change lanes, keeping low levels of jerk and acceleration
 
+Additionally the code contains several print out statements that were used to understand and debug the behavior of the different variables as the road conditions were changing. These statements are signaled bay comments and are left out as additional information.
 ## Prediction
 
 On each cycle the code will feed a series of 50 path points to the simulator for our car to follow. Not all of this positions will be realized at the end of the cycle, and the simulator will feed back  the previous path points that were left over. I want to add path points from the last of the previous path position. This is a position in the future of my car that I calculate and it is from this predicted position that I refer the rest of the operations to decide the future planning and trajectory.
@@ -130,6 +131,18 @@ The cost function is placed in the file `helpers.h`, in the `calculate_cost()` f
 The final sum of these costs to the total cost is weighted. The security cost is given a ten times bigger weight than the other cost, as it is very important not to collide with other vehicles on the road.
 
 Back in `main.cpp`, once all possible states are assigned cost, the state with the minimum cost is chosen and the car's state is changed to the state with lower cost.
+
+```
+double min_cost = 100.0;
+string pref_state;
+for(int i=0; i<states.size(); ++i){
+  if(state_cost[i] < min_cost){
+    min_cost = state_cost[i];
+    pref_state = states[i];
+  }
+}
+car.state = pref_state;
+```
 
 ## Trajectory Generation
 
