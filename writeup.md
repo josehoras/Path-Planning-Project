@@ -91,3 +91,45 @@ for(int check_lane = 0; check_lane<3; ++check_lane){
 
 ## Behavior Planning
 
+For planning and setting behavior I use a finite state machine. This describes the three possible states the car can be in: Keep Lane (KL), Lane Change Left (LCL), and Lane Change Right (LCR). As the car finds itself in one of these states, and a certain lane, other states will be available for it to change to. As expressed by the code below, a car can always choose KL as its next state. If it is in KL, depending on the lane it's in it can choose to transition to LCL or LCR states. If it is in  LCL or LCR it can keep this state or change to KL.
+
+```
+vector<string> states;
+states.push_back("KL");
+if(car.state == "KL") {
+  if (car.pred_lane != 0) { states.push_back("LCL"); }
+  if (car.pred_lane != 2) { states.push_back("LCR"); }
+}
+else if (car.state == "LCL") { states.push_back("LCL");}
+else if (car.state == "LCR") { states.push_back("LCR");}
+```
+The finite state machine could contain more states. For example Prepare Lane Change Left (PLCL) and Prepare Lane Change Right (PLCR) were used in the lesson. Also other states will be useful to describe a more complex environment than highway driving. However, these three states were already very efficient to perform a good navigation in the simulated highway.
+
+After knowing which states are available for the next cycle, the decision which one to choose is taken using cost functions. These functions will assign a total cost to each state and the state with lower cost will be the most favorable to choose.
+
+The cost function is placed in the file `helpers.h`, in the `calculate_cost()` function. The total cost is given by the addition of four cost components:
+- Efficiency cost: penalizes states in lanes with lower speeds, that have cars on it, even if they still don't limit our speed, and favors changing to the middle lane if the next one is empty.
+- Security cost: penalizes a state if other cars are too close to us either on the front or behind. In practice this cost is relevant to decide whether it is safe to change lanes.
+- Lazy cost: A small cost that discourage the car to change state with no reason. In case two states have the same cost, our car will prefer to keep its current state.
+- Keep Action cost: If the car is currently in the middle of changing lanes, to abandon LCL or LCR state is penalized. This eliminates doubt in the middle of a maneuver that can be dangerous, and only trace back if there is a big enough reason, like the security cost.
+
+The final sum of these costs to the total cost is weighted. The security cost is given a ten times bigger weight than the other cost, as it is very important not to collide with other vehicles on the road.
+
+Back in `main.cpp`, once all possible states are assigned cost, the state with the minimum cost is chosen and the car's state is changed to the state with lower cost.
+
+## Trajectory Generation
+
+Depending on the new state chosen, the trajectory will be defined by two parameters: the goal lane we want to be in, and the goal velocity, corresponding to that lane. The logic to assign those goals is contained in `helpers.h`, function `set_goals()`.
+
+Next, the current predicted velocity is adjusted for the next cycle taking into account the new goal velocity. I simply add or subtract a certain value to the velocity in order to come closer to the goal velocity. Different values are given if the velocity is close to zero, as more acceleration can be given, and if the velocity is close to the speed limit, as I want to be sure the car does not exceed this limit. The chosen values effect a proper dynamic in our car, not taking too long to start moving, and changing speed timely according to road conditions.
+
+Finally, the next trajectory is calculated with the help of the `spline.h` library. This method is recommended in the project description as an easy off the shelf solution. The implementation of the algorithm follows closely the one presented in the Project Q&A by Aaron Brown.
+
+A different route would have been to calculate the route using a quintic polynomial that minimizes the jerk. This implementation was discussed in the lesson, and I explored this route too. However, there were some challenges in this implementation:
+- The boundary conditions, as chosen in the lesson implementation, are {s, s&#775;  s&#775;&#775; s&#776; }
+
+  h<sub>&theta;</sub>(x) = s&#775;&#775; =theta;<sub>1</sub>x
+
+
+
+
