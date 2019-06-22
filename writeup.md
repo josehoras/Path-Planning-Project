@@ -126,10 +126,10 @@ Next, the current predicted velocity is adjusted for the next cycle taking into 
 Finally, the next trajectory is calculated with the help of the `spline.h` library. This method is recommended in the project description as an easy off the shelf solution. The implementation of the algorithm follows closely the one presented in the Project Q&A by Aaron Brown.
 
 A different route would have been to calculate the route using a quintic polynomial that minimizes the jerk. This implementation was discussed in the lesson, and I explored this route too. However, there were some challenges in this implementation:
-- The boundary conditions, as chosen in the lesson implementation, are {s, s&#775;  s&#775;&#775; s&#776; }
+- The boundary conditions, as chosen in the lesson implementation, are {s, s&#775;,  s&#775;&#775;, s&#776; }
 
   h<sub>&theta;</sub>(x) = s&#775;&#775; =theta;<sub>1</sub>x
 
 
 
-
+$ \sum_{\forall i}{x_i^{2}} $
